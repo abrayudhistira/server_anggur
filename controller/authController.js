@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 require('dotenv').config(); 
 
@@ -56,5 +57,40 @@ exports.register = async (req, res) => {
     } catch (err) {
         console.error('Register error:', err);
         return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+exports.login = async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Username dan password kosong.' });
+        }
+        const foundUser = await db.users.findOne({ where: { username } });
+        if (!foundUser) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        const isMatch = await bcrypt.compare(password, foundUser.password);
+        if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        const token = jwt.sign({ 
+            id: foundUser.id, 
+            role: foundUser.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1d' });
+        res.json({
+        message: 'Login successful',
+        token,
+        user: 
+            {
+                id: foundUser.userid,
+                username: foundUser.username,
+                role: foundUser.role,
+            }
+        });
+    } catch (err) {
+     res.status(500).json({ message: 'Server error', error: err.message });   
     }
 }
