@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const settingController = require('../controller/settingController'); 
+const { verifyTokenAndRole } = require('../middleware/authMiddleware'); 
 
+router.get('/all',settingController.getAllSettings);
 
-router.get('/status', settingController.getSettingStatus);
+router.put('/valve', settingController.updateValveStatus);
 
+router.put('/mode', settingController.updateModeStatus);
 
-router.put('/status', settingController.updateSettingStatus);
 
 module.exports = router;

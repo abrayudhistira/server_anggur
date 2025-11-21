@@ -12,8 +12,9 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('ON','OFF'),
-      allowNull: false
+      type: DataTypes.ENUM('ON','OFF','Auto','Manual'),
+      allowNull: false,
+      defaultValue: "OFF"
     }
   }, {
     sequelize,
