@@ -61,7 +61,7 @@ app.use(
   })
 );
 
-app.use("/users", authRoutes);
+app.use("/", authRoutes);
 app.use("/iot", iotRoutes);
 app.use("/setting", settingRoutes);
 
