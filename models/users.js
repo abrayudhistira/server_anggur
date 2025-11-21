@@ -18,10 +18,6 @@ module.exports = function(sequelize, DataTypes) {
     role: {
       type: DataTypes.ENUM('superadmin','admin'),
       allowNull: false
-    },
-    token: {
-      type: DataTypes.TEXT,
-      allowNull: true
     }
   }, {
     sequelize,
