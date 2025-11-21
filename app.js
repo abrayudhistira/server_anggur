@@ -9,6 +9,7 @@ const socketManager = require('./services/socketManager');
 
 const authRoutes = require("./routes/authRoutes");
 const iotRoutes = require("./routes/iotRoutes");
+const settingRoutes = require("./routes/settingRoutes");
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use(
 
 app.use("/users", authRoutes);
 app.use("/iot", iotRoutes);
+app.use("/setting", settingRoutes);
 
 io.on('connection', (socket) => {
     console.log(`Koneksi WS berhasil dari User ID: ${socket.userData.user_id}`);
