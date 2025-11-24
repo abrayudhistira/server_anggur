@@ -94,3 +94,76 @@ exports.login = async (req, res) => {
      res.status(500).json({ message: 'Server error', error: err.message });   
     }
 }
+
+exports.resetPassword = async (req, res) => {
+    const { username, newPassword } = req.body;
+
+    // Validasi Find User
+    if (!username || !newPassword) {
+        return res.status(400).json({ message: 'Nilai Username dan password Invalid/ Be.' });
+    }
+
+    const trans = await db.sequelize.transaction(); // Mulai transaksi
+    try {
+        let saltRounds = parseInt(process.env.ROUND, 10);
+
+        // Validasi saltRounds
+        if (isNaN(saltRounds) || saltRounds < 4 || saltRounds > 31) {
+            console.error('Invalid or missing ROUND environment variable. Defaulting to 10.');
+            saltRounds = 10;
+        }
+
+        const hashPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        // Update password user
+        const updated = await db.users.update(
+            { password: hashPassword },
+            { where: { username }, transaction: trans }
+        );
+
+        if (updated[0] === 0) {
+            await trans.rollback();
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        await trans.commit(); // Commit jika berhasil
+        return res.status(200).json({ message: 'Password berhasil direset.' });
+    } catch (errTx) {
+        await trans.rollback(); // Rollback jika terjadi error
+        console.error('Transaction error in resetPassword:', errTx);
+        const errorMsg = errTx && errTx.message ? errTx.message : 'Gagal mereset password (transaksi dibatalkan).';
+        return res.status(500).json({ message: 'Rollback', error: errorMsg });
+    }
+};
+
+
+exports.getAllUsers = async (req, res) => {
+    const trans = await db.sequelize.transaction(); // Mulai transaksi
+
+    try {
+        const users = await db.users.findAll({
+            attributes: ["id", "username", "role"],  // Jangan kirim password!
+            transaction: trans
+        });
+
+        await trans.commit(); // Commit transaksi
+
+        return res.status(200).json({
+            message: "Daftar user berhasil diambil.",
+            users
+        });
+
+    } catch (errTx) {
+        await trans.rollback(); // Rollback jika error
+
+        console.error("Transaction error in getAllUsers:", errTx);
+        const errorMsg = errTx && errTx.message
+            ? errTx.message
+            : "Gagal mengambil daftar user (transaksi dibatalkan).";
+
+        return res.status(500).json({
+            message: "Rollback",
+            error: errorMsg
+        });
+    }
+};

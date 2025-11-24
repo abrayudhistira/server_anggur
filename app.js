@@ -29,22 +29,60 @@ app.use(bodyParser.json());
 const server = http.createServer(app);
 const io = socketManager.init(server);
 
-io.use((socket, next) => {
-    const token = socket.handshake.query.token;
+// io.use((socket, next) => {
+//     const token = socket.handshake.query.token;
     
-    if (!token) {
-        return next(new Error('Akses Ditolak: Token otorisasi tidak ditemukan.'));
+//     if (!token) {
+//         return next(new Error('Akses Ditolak: Token otorisasi tidak ditemukan.'));
+//     }
+
+//     try {
+//         const decoded = jwt.verify(token, JWT_SECRET);
+        
+//         socket.userData = decoded; 
+        
+//         console.log(`[AUTH WS] User ID ${decoded.user_id} Role ${decoded.role} terotentikasi.`);
+//         next(); 
+//     } catch (err) {
+//         return next(new Error('Akses Ditolak: Token tidak valid atau kedaluwarsa.'));
+//     }
+// });
+
+// Server Node.js/Express + Socket.IO (Contoh Konseptual)
+
+io.use((socket, next) => {
+    const handshakeData = socket.handshake.query;
+    
+    // Logika 1: Validasi Klien Perangkat (ESP32)
+    if (handshakeData.secret_key) {
+        if (handshakeData.secret_key === process.env.DEVICE_SECRET_KEY) {
+            // Otentikasi Perangkat Berhasil
+            socket.isDevice = true; // Tambahkan flag untuk identifikasi
+            console.log('Perangkat terhubung dengan Secret Key.');
+            return next();
+        } else {
+            console.log('Secret Key tidak valid.');
+            return next(new Error('Unauthorized - Device Secret Key Invalid'));
+        }
     }
 
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        
-        socket.userData = decoded; 
-        
-        console.log(`[AUTH WS] User ID ${decoded.user_id} Role ${decoded.role} terotentikasi.`);
-        next(); 
-    } catch (err) {
-        return next(new Error('Akses Ditolak: Token tidak valid atau kedaluwarsa.'));
+    // Logika 2: Validasi Klien Pengguna (Web/Mobile)
+    else if (handshakeData.token) {
+        try {
+            // Lakukan verifikasi JWT di sini
+            const user = jwt.verify(handshakeData.token, process.env.JWT_SECRET);
+            socket.user = user; // Simpan data pengguna di objek socket
+            console.log('Pengguna terhubung dengan JWT.');
+            return next();
+        } catch (error) {
+            console.log('JWT tidak valid atau kadaluarsa.');
+            return next(new Error('Unauthorized - JWT Invalid'));
+        }
+    }
+
+    // Jika tidak ada keduanya
+    else {
+        return next(new Error('Unauthorized - Missing Key or Token'));
     }
 });
 
@@ -66,7 +104,7 @@ app.use("/iot", iotRoutes);
 app.use("/setting", settingRoutes);
 
 io.on('connection', (socket) => {
-    console.log(`Koneksi WS berhasil dari User ID: ${socket.userData.user_id}`);
+    console.log(`Koneksi WS berhasil.`);
     
     socket.emit('welcome', { message: 'Selamat datang, Anda telah terotentikasi!' });
     
@@ -75,7 +113,7 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('WebSocket server is ready.\n\nSelamat Datang Admin Capstone!.\n');
 });
