@@ -100,7 +100,7 @@ exports.resetPassword = async (req, res) => {
 
     // Validasi Find User
     if (!username || !newPassword) {
-        return res.status(400).json({ message: 'Nilai Username dan password Invalid/ Be.' });
+        return res.status(400).json({ message: 'Nilai Username dan password Invalid.' });
     }
 
     const trans = await db.sequelize.transaction(); // Mulai transaksi
@@ -135,7 +135,45 @@ exports.resetPassword = async (req, res) => {
         return res.status(500).json({ message: 'Rollback', error: errorMsg });
     }
 };
+exports.updateRole = async (req, res) => {
+    const { username, newRole } = req.body;
 
+    if (!username || !newRole) {
+        return res.status(400).json({ message: 'Nilai Username dan role Invalid.' });
+    }
+
+    const trans = await db.sequelize.transaction();
+    try {
+        // Cek user dulu
+        const user = await db.users.findOne({ where: { username } });
+
+        if (!user) {
+            await trans.rollback();
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        // Jika role sudah sama, tetap return success
+        if (user.role === newRole) {
+            await trans.commit();
+            return res.status(200).json({ message: 'Role sudah sama, tidak ada perubahan.' });
+        }
+
+        // Update role
+        await db.users.update(
+            { role: newRole },
+            { where: { username }, transaction: trans }
+        );
+
+        await trans.commit();
+        return res.status(200).json({ message: 'Role berhasil diupdate.' });
+
+    } catch (errTx) {
+        await trans.rollback();
+        return res.status(500).json({ message: 'Rollback', error: errTx.message });
+    }
+};
+
+//buat method untuk update username(by username) sama hapus akun (by username)
 
 exports.getAllUsers = async (req, res) => {
     const trans = await db.sequelize.transaction(); // Mulai transaksi
