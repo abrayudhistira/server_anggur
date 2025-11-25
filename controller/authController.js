@@ -2,7 +2,7 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-require('dotenv').config(); 
+require('dotenv').config();
 
 exports.register = async (req, res) => {
     const {
@@ -10,7 +10,7 @@ exports.register = async (req, res) => {
     } = req.body;
 
     if (!username || !password || !role) {
-        return res.status(400).json({ 
+        return res.status(400).json({
             message: 'Username, password, dan role wajib diisi.'
         });
     }
@@ -19,14 +19,14 @@ exports.register = async (req, res) => {
         const usernameTrim = String(username).trim();
 
         const existing = await db.users.findOne({ where: { username: usernameTrim } });
-        
+
         if (existing) {
             return res.status(409).json({ message: 'Username sudah terdaftar.' });
         }
         const trans = await db.sequelize.transaction();
         try {
             const saltRounds = parseInt(process.env.ROUND, 10);
-            
+
             // Periksa apakah konversi berhasil dan memiliki nilai yang wajar (opsional)
             if (isNaN(saltRounds) || saltRounds < 4 || saltRounds > 31) {
                 console.error('Invalid or missing ROUND environment variable. Defaulting to 10.');
@@ -34,18 +34,18 @@ exports.register = async (req, res) => {
             }
             const hashPassword = await bcrypt.hash(password, saltRounds);
             const userPayload = {
-                username : usernameTrim,
-                password : hashPassword,
-                role : role || 'admin',
+                username: usernameTrim,
+                password: hashPassword,
+                role: role || 'admin',
             };
-            const registerUser  = await db.users.create(userPayload, { transaction: trans });
+            const registerUser = await db.users.create(userPayload, { transaction: trans });
 
             await trans.commit();
 
             console.log(registerUser);
 
-            return res.status(201).json({ 
-                message: 'Pengguna berhasil didaftarkan.', 
+            return res.status(201).json({
+                message: 'Pengguna berhasil didaftarkan.',
             });
         } catch (errTx) {
             await trans.rollback();
@@ -73,17 +73,18 @@ exports.login = async (req, res) => {
         }
         const isMatch = await bcrypt.compare(password, foundUser.password);
         if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
-        const token = jwt.sign({ 
-            id: foundUser.id, 
-            role: foundUser.role }, 
-            process.env.JWT_SECRET, 
+        const token = jwt.sign({
+            id: foundUser.id,
+            role: foundUser.role
+        },
+            process.env.JWT_SECRET,
             { expiresIn: '1d' });
         res.json({
-        message: 'Login successful',
-        token,
-        user: 
+            message: 'Login successful',
+            token,
+            user:
             {
                 id: foundUser.userid,
                 username: foundUser.username,
@@ -91,7 +92,7 @@ exports.login = async (req, res) => {
             }
         });
     } catch (err) {
-     res.status(500).json({ message: 'Server error', error: err.message });   
+        res.status(500).json({ message: 'Server error', error: err.message });
     }
 }
 
@@ -135,6 +136,9 @@ exports.resetPassword = async (req, res) => {
         return res.status(500).json({ message: 'Rollback', error: errorMsg });
     }
 };
+
+
+
 exports.updateRole = async (req, res) => {
     const { username, newRole } = req.body;
 
@@ -173,7 +177,87 @@ exports.updateRole = async (req, res) => {
     }
 };
 
-//buat method untuk update username(by username) sama hapus akun (by username)
+
+exports.updateUsername = async (req, res) => {
+    const { username, newUsername } = req.body;
+
+    if (!username || !newUsername) {
+        return res.status(400).json({ message: 'Username lama dan username baru wajib diisi.' });
+    }
+
+    const trans = await db.sequelize.transaction();
+    try {
+        const user = await db.users.findOne({
+            where: { username },
+            transaction: trans
+        });
+
+        if (!user) {
+            await trans.rollback();
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        const exist = await db.users.findOne({
+            where: { username: newUsername },
+            transaction: trans
+        });
+
+        if (exist) {
+            await trans.rollback();
+            return res.status(409).json({ message: 'Username baru sudah dipakai.' });
+        }
+
+        await db.users.update(
+            { username: newUsername },
+            { where: { username }, transaction: trans }
+        );
+
+        await trans.commit();
+        return res.status(200).json({ message: 'Username berhasil diperbarui.' });
+
+    } catch (errTx) {
+        await trans.rollback();
+        console.error('Transaction error in updateUsername:', errTx);
+        return res.status(500).json({
+            message: 'Rollback',
+            error: errTx.message || 'Gagal update username.'
+        });
+    }
+};
+
+
+exports.deleteAccount = async (req, res) => {
+    const { username } = req.body;
+
+    if (!username) {
+        return res.status(400).json({ message: 'Username wajib diisi.' });
+    }
+
+    const trans = await db.sequelize.transaction();
+    try {
+        const deleted = await db.users.destroy({
+            where: { username },
+            transaction: trans
+        });
+
+        if (deleted === 0) {
+            await trans.rollback();
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        await trans.commit();
+        return res.status(200).json({ message: 'Akun berhasil dihapus.' });
+
+    } catch (errTx) {
+        await trans.rollback();
+        console.error('Transaction error in deleteAccount:', errTx);
+        return res.status(500).json({
+            message: 'Rollback',
+            error: errTx.message || 'Gagal menghapus akun.'
+        });
+    }
+};
+
 
 exports.getAllUsers = async (req, res) => {
     const trans = await db.sequelize.transaction(); // Mulai transaksi
