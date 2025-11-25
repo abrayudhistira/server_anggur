@@ -8,5 +8,6 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.get('/all-users', jwtAuth, authController.getAllUsers);
 router.post('/reset-password', jwtAuth, authController.resetPassword);
+router.post('/update-role', jwtAuth, authController.updateRole);
 
 module.exports = router;
