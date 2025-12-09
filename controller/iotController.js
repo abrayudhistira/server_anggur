@@ -64,6 +64,7 @@ const checkAutomaticControl = async (humidityValue) => {
 };
 
 exports.postSuhu = async (req, res) => {
+    console.log('[IOT] POST data from', req.ip, 'headers:', req.headers);
     const clientSecretKey = req.headers['x-api-key'];    
     const { humidity } = req.body; 
     
