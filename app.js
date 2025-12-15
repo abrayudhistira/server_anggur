@@ -4,6 +4,9 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const dotenv = require("dotenv");
 const jwt = require('jsonwebtoken');
+const cors = require('cors'); // <--- 1. Import CORS
+const cron = require('node-cron');
+const { finalizeYesterday } = require('./services/logger'); // sesuaikan path
 
 const socketManager = require('./services/socketManager'); 
 
@@ -18,10 +21,19 @@ dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!process.env.JWT_SECRET) {
-        throw new Error("Secret key is not defined in the environment variables.");
-    }
+    throw new Error("Secret key is not defined in the environment variables.");
+}
 
-const PORT = process.env.PORT || 3000;
+// Pastikan port ini SAMA dengan yang dipanggil di Frontend (BACKEND_URL)
+// Default saya set ke 3000 agar sesuai dengan frontend Anda sebelumnya
+const PORT = process.env.PORT || 5002; 
+
+// <--- 2. KONFIGURASI CORS (SOLUSI FAILED TO FETCH) --->
+app.use(cors({
+    origin: "*", // Mengizinkan akses dari semua domain (termasuk localhost:3001, dll)
+    methods: ["GET", "POST", "PUT", "DELETE"], // Method yang diizinkan
+    allowedHeaders: ["Content-Type", "Authorization", "x-api-key"] // Header yang diizinkan
+}));
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -29,27 +41,7 @@ app.use(bodyParser.json());
 const server = http.createServer(app);
 const io = socketManager.init(server);
 
-// io.use((socket, next) => {
-//     const token = socket.handshake.query.token;
-    
-//     if (!token) {
-//         return next(new Error('Akses Ditolak: Token otorisasi tidak ditemukan.'));
-//     }
-
-//     try {
-//         const decoded = jwt.verify(token, JWT_SECRET);
-        
-//         socket.userData = decoded; 
-        
-//         console.log(`[AUTH WS] User ID ${decoded.user_id} Role ${decoded.role} terotentikasi.`);
-//         next(); 
-//     } catch (err) {
-//         return next(new Error('Akses Ditolak: Token tidak valid atau kedaluwarsa.'));
-//     }
-// });
-
-// Server Node.js/Express + Socket.IO (Contoh Konseptual)
-
+// --- Middleware Socket.IO ---
 io.use((socket, next) => {
     const handshakeData = socket.handshake.query;
     
@@ -99,10 +91,12 @@ app.use(
   })
 );
 
+// --- Routes ---
 app.use("/", authRoutes);
 app.use("/iot", iotRoutes);
 app.use("/setting", settingRoutes);
 
+// --- Socket Connection Event ---
 io.on('connection', (socket) => {
     console.log(`Koneksi WS berhasil.`);
     
@@ -112,7 +106,16 @@ io.on('connection', (socket) => {
         console.log(`Klien terputus.`);
     });
 });
-
+cron.schedule('5 0 * * *', async () => {
+  try {
+    console.log('[cron] finalize yesterday logs start');
+    const result = await finalizeYesterday();
+    console.log('[cron] finalize result:', result);
+  } catch (err) {
+    console.error('[cron] finalize error:', err);
+  }
+});
+// --- Server Listen ---
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('WebSocket server is ready.\n\nSelamat Datang Admin Capstone!.\n');
