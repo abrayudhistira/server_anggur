@@ -13,6 +13,7 @@ const socketManager = require('./services/socketManager');
 const authRoutes = require("./routes/authRoutes");
 const iotRoutes = require("./routes/iotRoutes");
 const settingRoutes = require("./routes/settingRoutes");
+const backupRoutes = require("./routes/backupRoutes");
 
 const app = express();
 
@@ -26,7 +27,7 @@ if (!process.env.JWT_SECRET) {
 
 // Pastikan port ini SAMA dengan yang dipanggil di Frontend (BACKEND_URL)
 // Default saya set ke 3000 agar sesuai dengan frontend Anda sebelumnya
-const PORT = process.env.PORT || 5002; 
+const PORT = process.env.PORT; 
 
 // <--- 2. KONFIGURASI CORS (SOLUSI FAILED TO FETCH) --->
 app.use(cors({
@@ -95,6 +96,7 @@ app.use(
 app.use("/", authRoutes);
 app.use("/iot", iotRoutes);
 app.use("/setting", settingRoutes);
+app.use("/backup", backupRoutes);
 
 // --- Socket Connection Event ---
 io.on('connection', (socket) => {
