@@ -98,6 +98,15 @@ app.use("/iot", iotRoutes);
 app.use("/setting", settingRoutes);
 app.use("/backup", backupRoutes);
 
+app.use((req, res) => {
+    res.status(404).json({
+        status: 404,
+        error: "Not Found",
+        message: "Endpoint tidak tersedia"
+    });
+});
+
+
 // --- Socket Connection Event ---
 io.on('connection', (socket) => {
     console.log(`Koneksi WS berhasil.`);
