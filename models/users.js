@@ -18,6 +18,10 @@ module.exports = function(sequelize, DataTypes) {
     role: {
       type: DataTypes.ENUM('superadmin','admin'),
       allowNull: false
+    },
+    fcm_token: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     sequelize,

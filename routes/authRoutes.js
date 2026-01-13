@@ -3,6 +3,7 @@ const router = express.Router();
 const authController = require('../controller/authController');
 const jwtAuth = require('../middleware/authMiddleware');
 // const isSuperAdmin = require('../middleware/isSuperAdmin');
+const authToken = require('../middleware/jwtAuthorization');
 
 router.post('/register', jwtAuth, authController.register);
 router.post('/login', authController.login);
@@ -11,5 +12,6 @@ router.post('/reset-password', jwtAuth, authController.resetPassword);
 router.post('/update-role', jwtAuth, authController.updateRole);
 router.post('/update-username', jwtAuth, authController.updateUsername);
 router.post('/delete-account', jwtAuth, authController.deleteAccount);
+router.post('/update-fcm', authToken, authController.updateFcmToken);
 
 module.exports = router;

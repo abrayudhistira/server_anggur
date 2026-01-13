@@ -30,10 +30,21 @@ if (!process.env.JWT_SECRET) {
 const PORT = process.env.PORT; 
 
 // <--- 2. KONFIGURASI CORS (SOLUSI FAILED TO FETCH) --->
+// app.use(cors({
+//     origin: "*", // Mengizinkan akses dari semua domain (termasuk localhost:3001, dll)
+//     methods: ["GET", "POST", "PUT", "DELETE"], // Method yang diizinkan
+//     allowedHeaders: ["Content-Type", "Authorization", "x-api-key"], // Header yang diizinkan
+//     credentials: true
+// }));
 app.use(cors({
-    origin: "*", // Mengizinkan akses dari semua domain (termasuk localhost:3001, dll)
-    methods: ["GET", "POST", "PUT", "DELETE"], // Method yang diizinkan
-    allowedHeaders: ["Content-Type", "Authorization", "x-api-key"] // Header yang diizinkan
+    // Mengizinkan origin secara dinamis (siapapun yang akses di LAN Anda)
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        return callback(null, true);
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
+    credentials: true // <--- Ini harus berpasangan dengan withCredentials:true di Axios
 }));
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -87,7 +98,9 @@ app.use(
     cookie: {
         maxAge: 1000 * 60 * 60 * 2, // 2 jam
         httpOnly: true, // Meningkatkan keamanan
-        secure: process.env.NODE_ENV === "development",
+        //secure: process.env.NODE_ENV === "development",
+        secure: false,
+        sameSite: 'lax'
     }
   })
 );

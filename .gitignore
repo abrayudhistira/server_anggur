@@ -1,1 +1,4 @@
 /node_modules
+# Firebase/Google Cloud secrets
+config/*.json
+*.fbsvc-*.json

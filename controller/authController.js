@@ -86,7 +86,7 @@ exports.login = async (req, res) => {
             token,
             user:
             {
-                id: foundUser.userid,
+                id: foundUser.id,
                 username: foundUser.username,
                 role: foundUser.role,
             }
@@ -287,5 +287,33 @@ exports.getAllUsers = async (req, res) => {
             message: "Rollback",
             error: errorMsg
         });
+    }
+};
+
+exports.updateFcmToken = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { fcm_token } = req.body;
+
+        console.log(`Mencari User ID: ${userId} di database...`);
+
+        // Cari user dulu
+        const user = await db.users.findByPk(userId);
+
+        if (!user) {
+            console.log("HASIL: User benar-benar tidak ada di tabel users.");
+            return res.status(404).json({ message: "User tidak ditemukan di DB." });
+        }
+
+        console.log("User ditemukan, melakukan update token...");
+        user.fcm_token = fcm_token;
+        await user.save();
+
+        console.log("Berhasil update!");
+        return res.status(200).json({ status: "success", message: "FCM Token diperbarui" });
+
+    } catch (error) {
+        console.error('Error detail:', error);
+        return res.status(500).json({ message: error.message });
     }
 };
